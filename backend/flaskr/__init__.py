@@ -5,6 +5,7 @@ from flask_cors import CORS
 import random
 
 from flask_migrate import Migrate
+import sys
 
 from models import setup_db, Question, Category, db
 
@@ -55,7 +56,7 @@ def create_app(test_config=None):
         '''
         try:
             category_obj = Category.query.order_by('id').all()
-            categories = {cat.id:cat.type for cat in category_obj}
+            categories = {cat.id: cat.type for cat in category_obj}
             return jsonify({
                 "categories": categories
             })
@@ -65,7 +66,6 @@ def create_app(test_config=None):
     @app.route('/questions')
     def get_questions():
         # '''
-        # @TODO:
         # Create an endpoint to handle GET requests for questions,
         # including pagination (every 10 questions).
         # This endpoint should return a list of questions,
@@ -77,40 +77,61 @@ def create_app(test_config=None):
         # for three pages.
         # Clicking on the page numbers should update the questions.
         # '''
+        try:
+            # categories
+            cats = Category.query.order_by('id').all()
+            categories = {cat.id: cat.type for cat in cats}
 
-        # questions
-        ques = Question.query.order_by('id').all()
-        pagQ = paginate_query(request, ques)
+            # current_category
+            category = request.args.get('category', 7, type=int)
+            find_category = Category.query.filter(Category.id == category).one_or_none()
+            if find_category:
+                current_category = find_category.type
+                # questions
+                ques = Question.query.filter(Question.category == category).order_by('id').all()
+            else:
+                current_category = 'all'  # 7 is 'all' category not implemented
+                ques = Question.query.order_by('id').all()
 
-        # categories
-        cats = Category.query.order_by('id').all()
-        categories = {cat.id: cat.type for cat in cats}
+            pagQ = paginate_query(request, ques)
+            return jsonify({
+                "categories": categories,
+                "total_questions": len(pagQ[0]),
+                "questions": pagQ[0],
+                "currentCategory": current_category,
+            })
+        except:
+            print(sys.exc_info())
+            abort(404)
 
-        # current_category
-        category = request.args.get('category', 7, type=int)
-        print('category >>>> :', category)
-        find_category = Category.query.filter(Category.id == category).one_or_none()
-        print('find_category >>>> :', find_category)
-        if find_category:
-          current_category = find_category.type
+    @app.route('/questions/<int:ques_id>', methods=['DELETE'])
+    def delete_question(ques_id):
+        # '''
+        # @TODO:
+        # Create an endpoint to DELETE question using a question ID.
+
+        # TEST: When you click the trash icon next to a question, the question will be removed.
+        # This removal will persist in the database and when you refresh the page.
+        # '''
+        # print("ques_id",ques_id)
+        error = False
+        try:
+            ques = Question.query.filter(Question.id == ques_id).one_or_none()
+            ques.delete()
+        except:
+            error = True
+            print(sys.exc_info())
+        
+        if error:
+            abort(404)
         else:
-          current_category = 'all' # 7 is 'all' category not implemented
+            return jsonify({
+                "success": True,
+                "id": ques_id
+            })
 
 
-        return jsonify({
-            "categories": categories,
-            "total_questions": len(pagQ[0]),
-            "questions": pagQ,
-            "current_category": current_category,
-        })
-
-    # '''
-    # @TODO:
-    # Create an endpoint to DELETE question using a question ID.
-
-    # TEST: When you click the trash icon next to a question, the question will be removed.
-    # This removal will persist in the database and when you refresh the page.
-    # '''
+        
 
     # '''
     # @TODO:
