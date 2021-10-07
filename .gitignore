@@ -16,4 +16,6 @@ Thumbs.db
 ##############
 env
 frontend
+migrationsenv
+__pycache__
 migrations
